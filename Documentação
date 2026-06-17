@@ -1,0 +1,196 @@
+# Sistema de Gestão de Estacionamento QuickParking - Especificação de Requisitos
+
+## 1. Introdução
+
+### 1.1 Propósito
+Este documento especifica os requisitos para o sistema QuickParking, mantendo o mapeamento de prioridades, critérios de aceitação e dependências estruturadas de acordo às diretrizes da norma ISO/IEC/IEEE 29148.
+
+### 1.2 Escopo
+ O QuickParking é uma aplicação qde tela única executada localmente no guichê do estacionamento. Suas funções centrais são:
+- Registrar a entrada e saída de veículos (carros e motos) com captura automática de horário.
+- Calcular tarifas automaticamente, respeitando a carência de 25 minutos e a cobrança por fração de hora.
+- Controlar a lotação do pátio em tempo real por meio de um sistema de pontos equivalentes.
+- Gerar o fechamento do caixa diariamente.
+
+### 1.3 Definições
+- QP: QuickParking
+- RF: Requisito Funcional
+- RNF: Requisito Não-Funcional
+- RN: Regra de Negócio
+- UV (Unidade de Vaga): Sistema de pontuação inteira para o pátio (1 Carro = 3 UV)
+- Carro: 1 Carro = 3 UV consumidos no pátio
+- Moto: = 1UV consumido no pátio
+- Carência: Período de 15 minutos após a entrada em que a permanência e isenta de cobrança
+- Fração: Qualquer minuto além de uma hora cheia que gera cobrança de hora adicional completa
+
+### 1.4 Referências
+ISO/IEC/IEEE 29148:2018 - Systems and software engineering — Requirements engineering
+
+
+## 2. Descrição Geral
+
+### 2.1 Perspectiva do Produto
+O QuickParking será uma aplicação de tela única executada localmente no guichê do estacionamento, sem necessidade de conexão à internet, utilizará um banco de dados leve e embarcado para simplificar a codificação e garantir a integridade dos dados mesmo que haja queda de energia.
+
+### 2.2 Funções Principais
+- Registro rápido de entrada de carros e motos.
+- Cálculo automático de permanência e tarifas de saída.
+- Exibição do painel de vagas restantes em tempo real.
+- Fechamento financeiro do caixa do dia.
+
+
+## 3. Requisitos Específicos
+
+### 3.1 Requisitos Funcionais
+Cada requisito funcional é descrito no formato User Story: “Como [ator], eu quero [ação], para [benefício]”. Os critérios de aceitação definem as condições objetivas e mensuráveis que determinam se a implementação está completa e correta.
+
+## RF-001 - Registrar Entrada (Check-in)
+**Prioridade:** Alta  
+**Versão:** 1.0 | **Data:** 2026-05-27
+
+### História de Usuário
+Como operador de guichê, eu quero registrar a placa de um veículo e selecionar se ele é um carro ou uma moto, para abrir uma vaga no pátio e gravar eletronicamente o horário exato de entrada.
+
+### Critérios de Aceitação
+* Interface com 1 campo de texto alfanumérico para digitação da placa, com filtragem automática e caracteres especiais.
+* Seleção exclusiva entre as categorias “Carro” e “Moto” - somente uma opção pode estar ativa.
+* Captura e gravação automática do timestamp do sistema no momento em que o veículo for cadastrado.
+* Sistema bloqueia o check-in e exibe mensagem de erro se a placa já constar no pátio.
+* Após check-in bem sucedido, o cabeçalho do menu exibe contagem de vagas atualizadas na próxima interação.
+
+---
+
+## RF-002 - Registrar Saída (Check-out)
+**Prioridade:** Alta  
+**Rastreabilidade:** Briefing do cliente (dono) - necessidade de cálculo automático de tarifa na saída  
+**Dependências:** RF-001, RN-001, RN-002  
+**Versão:** 1.0 | **Data:** 2026-05-27
+
+### História de Usuário
+Como operador do guichê, eu quero buscar a placa do veículo que está saindo para visualizar o valor calculado pelo sistema, para cobrar o cliente corretamente e liberar o slot de volta ao pátio. 
+
+### Critérios de Aceitação
+* Busca por placa, exibe mensagem de erro se a placa não estiver no dicionário ativo. 
+* Captura automática da hora de saída no momento da busca. 
+* Exibição de: placa, tempo de permanência em minutos e valor final calculado (R$). 
+* O valor é calculado com tarifa de 10,00 para carros e 3,50 para motos.
+* Se o valor for maior que R$ 0,00, o sistema solicita a forma de pagamento antes de confirmar. 
+* Se o tempo estiver dentro da carência (≤ 15 min), a saída é liberada sem cobrança e sem registro no histórico. 
+
+---
+
+## RF-003 - Painel de Ocupação em Tempo Real
+**Prioridade:** Alta  
+**Rastreabilidade:** Restrição de lotação definida no briefing do cliente  
+**Dependências:** RF-001, RF-001, RN-003  
+**Versão:** 1.0 | **Data:** 2026-05-27
+
+### História de Usuário
+Como operador do guichê, eu quero visualizar no cabeçalho do menu o número de vagas restantes, para saber se posso permitir a entrada de novos veículos.
+
+### Critérios de Aceitação
+* Exibição no cabeçalho do menu no formato: “QUICKPARKINK CLI | Vagas Restantes: XX/20”
+* Painel mostra apenas as vagas livres sem exibir contagem por tipo (carro/moto).
+* Quando o pátio ter o número e vagas 20/20, o menu exibe alerta “Estacionamento Lotado” e desabilita a opção de check-in com mensagem informativa. 
+* O painel atualiza automaticamente a cada check-in/chek-out.
+
+---
+
+## RF-004 - Registro da Modalidade de Pagamento
+**Prioridade:** Média  
+**Rastreabilidade:** Demanda de prevenção de fraudes e controle de caixa  
+**Dependências:** RF-002  
+**Versão:** 1.0 | **Data:** 2026-05-27
+
+### História de Usuário
+Como operador do guichê, eu quero selecionar a forma de pagamento do cliente (Dinheiro, Cartão ou Pix) no momento da saída, para registrar como o pagamento foi recebido. 
+
+### Critérios de Aceitação
+* Na tela de check-out, quando o tempo for maior que 15 minutos, o sistema exibe menu com opções: 1-Dinheiro, 2-Cartão, 3-Pix. 
+* Aceita entradas numéricas ("1", "2", "3") ou textuais ("DINHEIRO", "CARTAO", "CARTÃO", "PIX"). 
+* A modalidade selecionada é exibida na confirmação mas não é persistida separadamente no histórico. 
+
+---
+
+## RF-005 - Consolidação de Faturamento da Sessão
+**Prioridade:** Alta  
+**Rastreabilidade:** Requisito de relatório de faturamento definido no briefing do cliente.   
+**Dependências:** RF-002, RF-004  
+
+### História de Usuário
+Como dono do estacionamento, eu quero visualizar o valor total arrecadado e o número de atendimentos pagos na sessão atual, para acompanhar os ganhos enquanto o sistema está em execução.  
+
+### Critérios de Aceitação
+* Opção 4 do menu exibe tela de faturamento com: número de atendimentos pagos e total em R$ da sessão atual. 
+* O total é calculado com a soma dos valores registrados na lista em memória. 
+* Os dados existem apenas na sessão atual; ao encerrar o programa, o histórico é perdido. 
+* Atendimentos na carência (R$ 0,00) não são adicionados ao historico de pagamentos e não contam no total. 
+
+---
+
+## RF-006 - Cancelamento Simples de Registro
+**Prioridade:** Baixa   
+**Rastreabilidade:** Mapeado no Brainstorming — tratamento de erro humano de digitação.   
+**Dependências:** RF-001  
+
+### História de Usuário
+Como operador do guichê, eu quero ter a opção de excluir um registro de entrada ativo da listagem, para corrigir erros de digitação imediatos caso eu anote uma placa errada.   
+
+### Critérios de Aceitação
+* Opção 3 do menu lista todas as placas ativas no pátio com o indicador "Excluir Registro disponível". 
+* Executa a exclusão diretamente do estacionamento, sem solicitar confirmação do operador. 
+* Se a placa não for encontrada, exibe mensagem de erro. 
+* O cancelamento NÃO é contabilizado no faturamento.
+* Quando o veículo é cancelado é liberado imediatamente.
+
+---
+
+## 3.2 Regras de Negócio (RN)
+*(Estas regras funcionam como os critérios de cálculo lógicos dos if/else que validam as histórias).*
+
+### RN-001: Período de Carência (Vinculado a RF-002)
+Se o tempo decorrido entre a entrada e a saída for menor ou igual a 15 minutos, o valor cobrado deve ser definido automaticamente em R$ 0,00.
+
+### RN-002: Tabela Tarifária e Frações (Vinculado a RF-002)
+Passada a carência, o sistema cobra a primeira hora cheia. A partir do minuto 61, qualquer fração de tempo gera a cobrança de uma nova hora adicional, utilizando valores fixos sem dízimas:
+* **Carro:** 1ª Hora = R$ 10,00 | Hora Adicional = R$ 5,00.
+* **Moto:** 1ª Hora = R$ 3,50 | Hora Adicional = R$ 1,50.
+
+### RN-003: Lotação Fracionada por Pontos Inteiros (Vinculado a RF-001 e RF-003)
+A capacidade total do pátio é de 60 pontos inteiros. Um carro consome 3 pontos e uma moto consome 1 ponto. Se a soma atual de pontos mais o novo veículo ultrapassar 60, o sistema deve bloquear novas entradas.
+
+### RN-004: Bloqueio de Placa Duplicada (Vinculado a RF-001)
+O sistema não pode aceitar o check-in de uma placa que já conste como ativa no pátio.
+
+---
+
+## 3.3 Requisitos Não-Funcionais (RNF)
+
+### RNF-001: Usabilidade — Agilidade no Atendimento 
+* **Categoria:** Usabilidade | **Prioridade:** Alta
+* **História de Usuário:** Como operador do guichê, eu quero um menu numerado simples, para concluir as ações de entrada e saída digitando apenas uma opção e a placa. 
+* **Métrica:** O fluxo de check-in exige no máximo 3 digitações no terminal. Não há tempo mínimo garantido pois depende da velocidade de digitação. 
+
+### RNF-002: Segurança — Integridade dos Horários (Anti-Fraude) 
+* **Categoria:** Segurança | **Prioridade:** Crítica
+* **História de Usuário:** Como dono do estacionamento, eu quero que o sistema capture o horário automaticamente, para garantir que os operadores não manipulem as tarifas. 
+* **Métrica:** O operador não tem como informar ou alterar o horário. 
+
+### RNF-003: Confiabilidade — Persistência de Dados  
+* **Categoria:** Confiabilidade | **Prioridade:** Crítica
+* **História de Usuário:** Como operador do guichê, eu quero que os registros sejam salvos mesmo em caso de queda de energia, para não perder dados dos veículos estacionados. 
+* **Status de Implementação:** NÃO ATENDIDO: Os dados são mantidos inteiramente em memória RAM. Uma queda de energia ou fechamento acidental do terminal resulta na perda total dos registros.
+
+
+## 4. Resumo de Prioridades
+
+| ID | Nome | Prioridade | Justificativa |
+| :--- | :--- | :--- | :--- |
+| **RNF-002** | Segurança (Anti-Fraude) | Crítica | Implementado: `datetime.now()` impede manipulação de horários. |
+| **RNF-003** | Persistência de Dados | Crítica | NÃO implementado: dados em memória são perdidos ao fechar. |
+| **RF-001** | Check-in | Alta | Operação primária do sistema — implementada. |
+| **RF-002** | Check-out | Alta | Operação primária e fonte de receita — implementada com tarifa única. |
+| **RF-003** | Painel de Ocupação | Alta | Controle de capacidade — implementado. |
+| **RF-005** | Faturamento da Sessão | Alta | Implementado sem detalhamento por modalidade ou por dia. |
+| **RNF-001** | Usabilidade/Agilidade | Alta | Menu CLI simples. |
+| **RF-004** | Modalidade de Pagamento | Média | Registrada no checkout, sem persistência separada. |
